@@ -67,6 +67,18 @@ public class AggregationController {
         return ResponseEntity.ok(result);
     }
 
+    @Operation(summary = "Get all Public Configuration Templates from a list of predefined nodes.")
+    @BrowseParameters
+    @Parameter(name = "suspended", description = "Suspended",
+            content = @Content(schema = @Schema(type = "boolean", defaultValue = "false")))
+    @GetMapping(path = "configurationTemplates")
+    public ResponseEntity<Paging<AggregatedResult>> getAllPublicConfigurationTemplates(@Parameter(hidden = true)
+                                                               @RequestParam MultiValueMap<String, Object> allRequestParams) {
+        FacetFilter ff = FacetFilter.from(allRequestParams);
+        Paging<AggregatedResult> result = aggregatingService.getMergedPagedResults(ff, "configurationTemplate");
+        return ResponseEntity.ok(result);
+    }
+
     @Operation(summary = "Get all Public Configuration Template Instances from a list of predefined nodes.")
     @BrowseParameters
     @Parameter(name = "suspended", description = "Suspended",

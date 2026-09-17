@@ -9,7 +9,7 @@ The **Federation Search** is a Java-based service that aggregates EOSC Resources
 Results from different nodes are merged and ranked using the **Reciprocal Rank Fusion (RRF)** algorithm, ensuring a fair and robust ordering of results across the entire federation.
 
 ## Prerequisites
-- Java 21
+- Java 25
 - Maven 3.x
 
 ## Installation

@@ -18,11 +18,13 @@ package gr.uoa.di.madgik.federation.search.aggregator.service;
 
 import gr.uoa.di.madgik.federation.search.aggregator.dto.AggregatedResult;
 import gr.uoa.di.madgik.federation.search.aggregator.dto.Page;
+import gr.uoa.di.madgik.federation.search.aggregator.dto.ResourceIdName;
 import gr.uoa.di.madgik.federation.search.aggregator.util.BundledResourceUnwrapper;
 import gr.uoa.di.madgik.node.registry.client.Node;
 import gr.uoa.di.madgik.registry.domain.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -42,6 +44,15 @@ public class AggregatingService {
     private final NodeEndpointService nodeEndpointService;
     private final NodeResolver nodeResolver;
     private final ScoringService scoringService;
+
+    /**
+     * Upper bound on how many records the {@link #listResourceIdsAndNames} fan-out pulls from a
+     * single node. A relational-field dropdown needs the whole federation-wide inventory, so this
+     * is deliberately high; it exists only to stop a misbehaving node from streaming an unbounded
+     * response into the aggregator.
+     */
+    @org.springframework.beans.factory.annotation.Value("${federation.resource-ids.max-per-node:10000}")
+    private int resourceIdsMaxPerNode;
 
     public AggregatingService(RestClient restClient,
                               NodeEndpointService nodeEndpointService,
@@ -113,6 +124,82 @@ public class AggregatingService {
         return createPage(from, finalResults.size(), totalAvailable, finalResults, mergedFacets, nodes);
     }
 
+    /**
+     * Returns every resource of {@code resourceType} across the federation as a de-duplicated,
+     * name-sorted list of {@code {id, name}} pairs - the minimum a node needs to populate a
+     * relational-field dropdown that can reference resources living on other nodes.
+     * <p>
+     * Unlike {@link #getMergedPagedResults}, this does a single fan-out round (no metadata phase),
+     * projects each node's hits down to id + name <em>before</em> merging so full payloads are
+     * never held in aggregate, and skips Reciprocal Rank Fusion / facet merging entirely (a
+     * picker wants a stable alphabetical list, not a relevance ranking). The result is cached
+     * per {@code resourceType}/{@code query} so the fan-out runs once per TTL for the whole
+     * federation rather than once per dropdown open.
+     *
+     * @param query optional free-text filter passed through to each node's search as a keyword;
+     *              {@code null}/blank returns the full inventory.
+     */
+    @Cacheable(cacheNames = "federationResourceIds",
+            key = "#resourceType + '|' + (#query == null ? '' : #query.trim())")
+    public List<ResourceIdName> listResourceIdsAndNames(String resourceType, String query) {
+        FacetFilter ff = new FacetFilter();
+        ff.setFrom(0);
+        ff.setQuantity(resourceIdsMaxPerNode);
+        if (query != null && !query.isBlank()) {
+            ff.setKeyword(query.trim());
+        }
+
+        List<String> endpoints = nodeEndpointService.getResourceCatalogueEndpoints().stream()
+                .map(base -> String.join("/", base, "public", resourceType, "search"))
+                .toList();
+
+        List<ResourceIdName> all = endpoints.parallelStream()
+                .flatMap(endpoint -> fetchIdNames(
+                        buildUrlWithFacetFilter(endpoint, ff, 0, resourceIdsMaxPerNode), resourceType).stream())
+                .toList();
+
+        Map<String, ResourceIdName> byId = new LinkedHashMap<>();
+        for (ResourceIdName r : all) {
+            byId.putIfAbsent(r.id(), r);
+        }
+        return byId.values().stream()
+                .sorted(Comparator.comparing(r -> r.name() == null ? "" : r.name(), String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    private List<ResourceIdName> fetchIdNames(String url, String resourceType) {
+        return fetchPage(url, FetchPhase.DATA)
+                .map(page -> {
+                    List<HighlightedResult<?>> results = page.getResults();
+                    if (results == null || results.isEmpty()) {
+                        return Collections.<ResourceIdName>emptyList();
+                    }
+                    List<HighlightedResult<?>> unwrapped =
+                            BundledResourceUnwrapper.unwrapIfEnclosed(results, resourceType, url);
+                    List<ResourceIdName> out = new ArrayList<>(unwrapped.size());
+                    for (HighlightedResult<?> r : unwrapped) {
+                        if (r.getResult() instanceof Map<?, ?> map) {
+                            Object id = map.get("id");
+                            if (id == null) {
+                                continue;
+                            }
+                            Object name = map.get("name");
+                            out.add(new ResourceIdName(id.toString(), name != null ? name.toString() : id.toString()));
+                        }
+                    }
+                    return out;
+                })
+                .orElseGet(Collections::emptyList);
+    }
+
+    /**
+     * Resolves a single resource by id from whichever node owns it. Cached per
+     * {@code resourceType/prefix/suffix} (misses included, as negative results) so repeated
+     * lookups - notably the write-path existence checks a node runs when validating a
+     * cross-node reference - do not re-fan-out to every node on every call.
+     */
+    @Cacheable(cacheNames = "federationResourceById",
+            key = "#resourceType + '/' + #prefix + '/' + #suffix")
     public Optional<Map<String, Object>> getResourceById(String resourceType, String prefix, String suffix) {
         return nodeEndpointService.getResourceCatalogueEndpoints().parallelStream()
                 .map(base -> String.join("/", base, "public", resourceType, prefix, suffix))
@@ -134,6 +221,123 @@ public class AggregatingService {
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .findFirst();
+    }
+
+    /**
+     * Fetches a single Configuration Template by id from whichever node owns it, from that node's
+     * public layer - a cross-node read only ever sees public layers, and the id that flows through
+     * the federation is the template's public (bare) PID.
+     */
+    public Optional<Map<String, Object>> getConfigurationTemplateById(String prefix, String suffix) {
+        return firstNonNullFromNodes(base ->
+                String.join("/", base, "public", "configurationTemplate", prefix, suffix));
+    }
+
+    /**
+     * Fetches the dynamic-form Model bound to a Configuration Template, from whichever node owns
+     * the template. The Model itself is a node-local resource; the owning node serves it through
+     * its {@code public/configurationTemplate/{prefix}/{suffix}/model} route, keyed by the
+     * template's public PID.
+     */
+    public Optional<Map<String, Object>> getConfigurationTemplateModel(String prefix, String suffix) {
+        return firstNonNullFromNodes(base ->
+                String.join("/", base, "public", "configurationTemplate", prefix, suffix, "model"));
+    }
+
+    /**
+     * Fetches all Configuration Templates of an Interoperability Record, from whichever node owns
+     * it. Returns the raw {@code Paging} body of the first node whose {@code results} is non-empty.
+     * <p>
+     * Targets each node's {@code public/configurationTemplate/getAllByInteroperabilityRecordId}
+     * route: a cross-node read only ever sees public layers, and the public layer keys the
+     * template-to-record link by the Interoperability Record's public PID (the id form that flows
+     * through the federation), whereas the private layer keys it by the record's node-local id.
+     */
+    public Optional<Map<String, Object>> getConfigurationTemplatesByInteroperabilityRecordId(String prefix, String suffix) {
+        return nodeEndpointService.getResourceCatalogueEndpoints().parallelStream()
+                .map(base -> String.join("/", base, "public", "configurationTemplate",
+                        "getAllByInteroperabilityRecordId", prefix, suffix))
+                .map(url -> fetchMap(url, "configuration template list fetch"))
+                .filter(body -> body.isPresent() && hasNonEmptyResults(body.get()))
+                .map(Optional::get)
+                .findFirst();
+    }
+
+    private Optional<Map<String, Object>> firstNonNullFromNodes(java.util.function.Function<String, String> urlForBase) {
+        return nodeEndpointService.getResourceCatalogueEndpoints().parallelStream()
+                .map(urlForBase)
+                .map(url -> fetchMap(url, "federated resource fetch"))
+                .filter(body -> body.isPresent() && !body.get().isEmpty())
+                .map(Optional::get)
+                .findFirst();
+    }
+
+    private Optional<Map<String, Object>> fetchMap(String url, String opLabel) {
+        try {
+            Map<String, Object> result = restClient.get()
+                    .uri(url)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<>() {});
+            return Optional.ofNullable(result);
+        } catch (Exception e) {
+            logger.warn("Skipping unavailable node during {}: {} ({})", opLabel, url, describeException(e));
+            logger.debug("Unavailable node details for {}", url, e);
+            return Optional.empty();
+        }
+    }
+
+    private boolean hasNonEmptyResults(Map<String, Object> pagingBody) {
+        Object results = pagingBody.get("results");
+        return results instanceof List<?> list && !list.isEmpty();
+    }
+
+    /**
+     * Fans a candidate resource out, in parallel, to every node's embedding-based
+     * {@code POST /dedup/{resourceType}/check/local}. Unlike {@link #getMergedPagedResults}, the
+     * per-node scores here are already directly comparable (every node runs the same
+     * cosine-similarity recommendation logic), so results are merged by a plain sort on score
+     * rather than rank fusion.
+     * <p>
+     * This deliberately targets each node's <em>local-only</em> {@code check/local} route rather
+     * than {@code check}: {@code check} itself calls back into this aggregator to get a
+     * federation-wide view, so fanning out to it here would call back into every node's
+     * {@code check}, which would call this aggregator again, recursing without bound.
+     */
+    public List<ScoredResult<Map<String, Object>>> findSimilarAcrossFederation(String resourceType, Map<String, Object> resource,
+                                                                                Float threshold, int quantity) {
+        List<String> endpoints = nodeEndpointService.getResourceCatalogueEndpoints().stream()
+                .map(base -> String.join("/", base, "dedup", resourceType, "check", "local"))
+                .toList();
+
+        return endpoints.parallelStream()
+                .flatMap(endpoint -> fetchSimilar(endpoint, resource, threshold, quantity).stream())
+                .sorted((a, b) -> Float.compare(b.getScore(), a.getScore()))
+                .limit(quantity)
+                .toList();
+    }
+
+    private List<ScoredResult<Map<String, Object>>> fetchSimilar(String endpoint, Map<String, Object> resource,
+                                                                   Float threshold, int quantity) {
+        String url = UriComponentsBuilder.fromUriString(endpoint)
+                .queryParam("threshold", threshold)
+                .queryParam("quantity", quantity)
+                .toUriString();
+        try {
+            List<ScoredResult<Map<String, Object>>> results = restClient.post()
+                    .uri(url)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .body(resource)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<ScoredResult<Map<String, Object>>>>() {
+                    });
+            return results != null ? results : List.of();
+        } catch (Exception e) {
+            logger.warn("Skipping unavailable node during similarity fetch: {} ({})", url, describeException(e));
+            logger.debug("Unavailable node details for {}", url, e);
+            return List.of();
+        }
     }
 
     private Optional<APIPageMetadata> fetchPageMetadata(String endpoint, FacetFilter ff) {

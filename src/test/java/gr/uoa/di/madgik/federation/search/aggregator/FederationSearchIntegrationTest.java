@@ -129,6 +129,35 @@ class FederationSearchIntegrationTest {
         assertThat((List<?>) body.get("results")).hasSize(1);
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void listResourceIds_projectsDedupsAndSortsAcrossNodes() {
+        String nodeA = "http://localhost:" + wireMock.port() + "/node-a";
+        String nodeB = "http://localhost:" + wireMock.port() + "/node-b";
+        when(nodeEndpointService.getResourceCatalogueEndpoints()).thenReturn(List.of(nodeA, nodeB));
+
+        // Single fan-out round (no quantity=0 metadata phase); svc-a is returned by both nodes.
+        wireMock.stubFor(get(urlPathEqualTo("/node-a/public/service/search"))
+                .willReturn(ok("""
+                        {"total":2,"from":0,"to":2,"results":[
+                          {"score":1.0,"result":{"id":"svc-z","name":"Zeta"},"highlights":[]},
+                          {"score":1.0,"result":{"id":"svc-a","name":"Alpha"},"highlights":[]}],"facets":[]}
+                        """).withHeader("Content-Type", "application/json")));
+        wireMock.stubFor(get(urlPathEqualTo("/node-b/public/service/search"))
+                .willReturn(ok("""
+                        {"total":2,"from":0,"to":2,"results":[
+                          {"score":1.0,"result":{"id":"svc-a","name":"Alpha"},"highlights":[]},
+                          {"score":1.0,"result":{"id":"svc-m","name":"Mu"},"highlights":[]}],"facets":[]}
+                        """).withHeader("Content-Type", "application/json")));
+
+        List<Map<String, Object>> body = client.get().uri("/federation/services/ids")
+                .retrieve().body(List.class);
+
+        assertThat(body).isNotNull();
+        assertThat(body).extracting(m -> m.get("id")).containsExactly("svc-a", "svc-m", "svc-z");
+        assertThat(body).extracting(m -> m.get("name")).containsExactly("Alpha", "Mu", "Zeta");
+    }
+
     private void stubNode(String path, int total, String resultsJson) {
         wireMock.stubFor(get(urlPathEqualTo(path))
                 .withQueryParam("quantity", equalTo("0"))

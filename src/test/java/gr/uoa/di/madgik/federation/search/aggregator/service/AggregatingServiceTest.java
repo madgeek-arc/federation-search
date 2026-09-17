@@ -7,6 +7,7 @@ import gr.uoa.di.madgik.registry.domain.HighlightedResult;
 import gr.uoa.di.madgik.registry.domain.Paging;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestClient;
 
@@ -14,7 +15,9 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AggregatingServiceTest {
@@ -157,5 +160,94 @@ class AggregatingServiceTest {
         assertThat(results.get(0).result().get("id")).isEqualTo("A");
         assertThat(results.get(1).result().get("id")).isEqualTo("M");
         assertThat(results.get(2).result().get("id")).isEqualTo("Z");
+    }
+
+    @Test
+    void listResourceIdsAndNames_dedupsAndSortsByName_unwrappingEnclosedPayloads() {
+        when(nodeEndpointService.getResourceCatalogueEndpoints()).thenReturn(List.of("node1", "node2"));
+
+        RestClient.RequestHeadersUriSpec getSpec = mock(RestClient.RequestHeadersUriSpec.class);
+        RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
+        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+
+        when(restClient.get()).thenReturn(getSpec);
+        when(getSpec.uri(anyString())).thenReturn(headersSpec);
+        when(headersSpec.accept(any())).thenReturn(headersSpec);
+        when(headersSpec.retrieve()).thenReturn(responseSpec);
+
+        // Nodes enclose the payload under the resource-type key ("service"), like the real API.
+        HighlightedResult<?> zeta = mock(HighlightedResult.class);
+        when(zeta.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "n/zeta", "name", "Zeta")))));
+        HighlightedResult<?> alpha = mock(HighlightedResult.class);
+        when(alpha.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "n/alpha", "name", "Alpha")))));
+        HighlightedResult<?> alphaDup = mock(HighlightedResult.class);
+        when(alphaDup.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "n/alpha", "name", "Alpha")))));
+        HighlightedResult<?> mu = mock(HighlightedResult.class);
+        when(mu.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "n/mu", "name", "Mu")))));
+
+        Paging<HighlightedResult<?>> node1Page = new Paging<>(2, 0, 2, List.of(zeta, alpha), Collections.emptyList());
+        Paging<HighlightedResult<?>> node2Page = new Paging<>(2, 0, 2, List.of(alphaDup, mu), Collections.emptyList());
+
+        // Single fan-out round: one body() call per node (no metadata phase).
+        when(responseSpec.body(any(ParameterizedTypeReference.class)))
+                .thenReturn(node1Page)
+                .thenReturn(node2Page);
+
+        List<gr.uoa.di.madgik.federation.search.aggregator.dto.ResourceIdName> result =
+                aggregatingService.listResourceIdsAndNames("service", null);
+
+        assertThat(result).extracting("id").containsExactly("n/alpha", "n/mu", "n/zeta");
+        assertThat(result).extracting("name").containsExactly("Alpha", "Mu", "Zeta");
+    }
+
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void getConfigurationTemplateModel_returnsFirstNodeThatHasIt() {
+        when(nodeEndpointService.getResourceCatalogueEndpoints()).thenReturn(List.of("node1", "node2"));
+
+        RestClient.RequestHeadersUriSpec getSpec = mock(RestClient.RequestHeadersUriSpec.class);
+        RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
+        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+        when(restClient.get()).thenReturn(getSpec);
+        when(getSpec.uri(anyString())).thenReturn(headersSpec);
+        when(headersSpec.accept(any())).thenReturn(headersSpec);
+        when(headersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(any(ParameterizedTypeReference.class)))
+                .thenReturn(null)
+                .thenReturn(new HashMap<>(Map.of("id", "m-b-conftemp", "name", "CT model")));
+
+        Optional<Map<String, Object>> model = aggregatingService.getConfigurationTemplateModel("con", "abc123");
+
+        assertThat(model).isPresent();
+        assertThat(model.get().get("name")).isEqualTo("CT model");
+    }
+
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void getConfigurationTemplatesByInteroperabilityRecordId_skipsNodesWithEmptyResults() {
+        when(nodeEndpointService.getResourceCatalogueEndpoints()).thenReturn(List.of("node1", "node2"));
+
+        RestClient.RequestHeadersUriSpec getSpec = mock(RestClient.RequestHeadersUriSpec.class);
+        RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
+        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+        when(restClient.get()).thenReturn(getSpec);
+        when(getSpec.uri(anyString())).thenReturn(headersSpec);
+        when(headersSpec.accept(any())).thenReturn(headersSpec);
+        when(headersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(any(ParameterizedTypeReference.class)))
+                .thenReturn(new HashMap<>(Map.of("results", List.of())))
+                .thenReturn(new HashMap<>(Map.of("results", List.of(Map.of("id", "con/x")))));
+
+        Optional<Map<String, Object>> body =
+                aggregatingService.getConfigurationTemplatesByInteroperabilityRecordId("21.T15", "ir1");
+
+        assertThat(body).isPresent();
+        assertThat((List<?>) body.get().get("results")).hasSize(1);
+
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(getSpec, atLeastOnce()).uri(urlCaptor.capture());
+        assertThat(urlCaptor.getAllValues())
+                .allSatisfy(url -> assertThat(url)
+                        .contains("/public/configurationTemplate/getAllByInteroperabilityRecordId/21.T15/ir1"));
     }
 }
