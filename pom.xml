@@ -141,4 +141,15 @@
 		</repository>
 	</repositories>
 
+	<distributionManagement>
+		<repository>
+			<id>madgik-releases</id>
+			<url>https://repo.madgik.di.uoa.gr/content/repositories/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>madgik-snapshots</id>
+			<url>https://repo.madgik.di.uoa.gr/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
 </project>

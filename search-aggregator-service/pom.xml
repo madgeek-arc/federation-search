@@ -12,6 +12,10 @@
 	<name>Federation Search Aggregator Service</name>
 	<description>Spring Boot application that aggregates search results from multiple Resource Catalogue nodes into a single federation API endpoint.</description>
 
+	<properties>
+		<maven.deploy.skip>true</maven.deploy.skip>
+	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>gr.uoa.di.madgik.federation</groupId>

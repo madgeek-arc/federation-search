@@ -15,6 +15,10 @@
     <description>Shared DTOs for the federation search aggregator's REST API, used by both the
         service that implements it and the client library that consumes it.</description>
 
+    <properties>
+        <maven.deploy.skip>false</maven.deploy.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>gr.uoa.di.madgik</groupId>

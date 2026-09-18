@@ -86,6 +86,18 @@ pipeline {
       }
     }
 
+    stage('Deploy Artifacts') {
+      when {
+        anyOf {
+          expression { return DOCKER_TAG.endsWith('-SNAPSHOT') } // deploy all snapshots
+          expression { return env.TAG_NAME != null } // deploy only tag build as release
+        }
+      }
+      steps {
+        sh './mvnw deploy -DskipTests'
+      }
+    }
+
     stage('Upload Image') {
       when {
         expression {

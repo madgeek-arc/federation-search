@@ -14,6 +14,10 @@
     <name>Federation Search Aggregator Client</name>
     <description>Typed HTTP client for the federation search aggregator's REST API.</description>
 
+    <properties>
+        <maven.deploy.skip>false</maven.deploy.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>gr.uoa.di.madgik.federation</groupId>
