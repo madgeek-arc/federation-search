@@ -1,4 +1,4 @@
-package gr.uoa.di.madgik.federation.search.aggregator.dto;
+package gr.uoa.di.madgik.federation.search.aggregator.core;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

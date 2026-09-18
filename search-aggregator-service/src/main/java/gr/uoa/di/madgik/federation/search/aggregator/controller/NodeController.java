@@ -1,6 +1,6 @@
 package gr.uoa.di.madgik.federation.search.aggregator.controller;
 
-import gr.uoa.di.madgik.federation.search.aggregator.dto.NodeInfo;
+import gr.uoa.di.madgik.federation.search.aggregator.core.NodeInfo;
 import gr.uoa.di.madgik.federation.search.aggregator.service.NodeResolver;
 import gr.uoa.di.madgik.node.registry.client.Node;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,15 +25,23 @@ public class NodeController {
     @GetMapping
     public ResponseEntity<List<NodeInfo>> getNodes() {
         return ResponseEntity.ok(nodeResolver.fetchNodes().stream()
-                .map(n -> new NodeInfo(n.getPid(), n.getName(), n.getLogo(), n.getNodeEndpoint()))
+                .map(NodeController::toNodeInfo)
                 .toList());
     }
 
     @Operation(summary = "Get a Node by its PID from the Node Registry.")
     @GetMapping(path = "{prefix}/{suffix}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Node> get(@PathVariable(value = "prefix") String prefix,
-                                    @PathVariable(value = "suffix") String suffix) {
-        return new ResponseEntity<>(nodeResolver.fetchNodes().stream().filter(node -> node.getPid().equals(prefix + "/" + suffix)).findAny().orElseThrow(), HttpStatus.OK);
+    public ResponseEntity<NodeInfo> get(@PathVariable(value = "prefix") String prefix,
+                                        @PathVariable(value = "suffix") String suffix) {
+        return new ResponseEntity<>(nodeResolver.fetchNodes().stream()
+                .filter(node -> node.getPid().equals(prefix + "/" + suffix))
+                .findAny()
+                .map(NodeController::toNodeInfo)
+                .orElseThrow(), HttpStatus.OK);
+    }
+
+    private static NodeInfo toNodeInfo(Node node) {
+        return new NodeInfo(node.getPid(), node.getName(), node.getLogo(), node.getNodeEndpoint());
     }
 
 }
