@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>gr.uoa.di.madgik.federation</groupId>
+        <artifactId>search-aggregator</artifactId>
+        <version>1.2.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>search-aggregator-core</artifactId>
+    <packaging>jar</packaging>
+    <name>Federation Search Aggregator Core</name>
+    <description>Shared DTOs for the federation search aggregator's REST API, used by both the
+        service that implements it and the client library that consumes it.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>gr.uoa.di.madgik</groupId>
+            <artifactId>registry-core-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
