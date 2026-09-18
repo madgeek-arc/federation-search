@@ -248,15 +248,18 @@ public class AggregatingService {
      * Fetches all Configuration Templates of an Interoperability Record, from whichever node owns
      * it. Returns the raw {@code Paging} body of the first node whose {@code results} is non-empty.
      * <p>
-     * Targets each node's {@code public/configurationTemplate/getAllByInteroperabilityRecordId}
-     * route: a cross-node read only ever sees public layers, and the public layer keys the
-     * template-to-record link by the Interoperability Record's public PID (the id form that flows
-     * through the federation), whereas the private layer keys it by the record's node-local id.
+     * Targets each node's {@code public/configurationTemplate/all} listing route, filtered by
+     * {@code interoperability_record_id}: a cross-node read only ever sees public layers, and the
+     * public layer keys the template-to-record link by the Interoperability Record's public PID
+     * (the id form that flows through the federation), whereas the private layer keys it by the
+     * record's node-local id.
      */
     public Optional<Map<String, Object>> getConfigurationTemplatesByInteroperabilityRecordId(String prefix, String suffix) {
         return nodeEndpointService.getResourceCatalogueEndpoints().parallelStream()
-                .map(base -> String.join("/", base, "public", "configurationTemplate",
-                        "getAllByInteroperabilityRecordId", prefix, suffix))
+                .map(base -> UriComponentsBuilder.fromUriString(base + "/public/configurationTemplate/all")
+                        .queryParam("interoperability_record_id", prefix + "/" + suffix)
+                        .queryParam("quantity", 1000)
+                        .toUriString())
                 .map(url -> fetchMap(url, "configuration template list fetch"))
                 .filter(body -> body.isPresent() && hasNonEmptyResults(body.get()))
                 .map(Optional::get)

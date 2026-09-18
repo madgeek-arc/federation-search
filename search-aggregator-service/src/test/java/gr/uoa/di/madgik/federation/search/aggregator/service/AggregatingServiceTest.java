@@ -265,6 +265,6 @@ class AggregatingServiceTest {
         verify(getSpec, atLeastOnce()).uri(urlCaptor.capture());
         assertThat(urlCaptor.getAllValues())
                 .allSatisfy(url -> assertThat(url)
-                        .contains("/public/configurationTemplate/getAllByInteroperabilityRecordId/21.T15/ir1"));
+                        .contains("/public/configurationTemplate/all?interoperability_record_id=21.T15/ir1"));
     }
 }
