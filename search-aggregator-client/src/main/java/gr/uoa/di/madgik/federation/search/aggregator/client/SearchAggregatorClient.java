@@ -19,6 +19,7 @@ package gr.uoa.di.madgik.federation.search.aggregator.client;
 import gr.uoa.di.madgik.federation.search.aggregator.core.AggregatedResult;
 import gr.uoa.di.madgik.federation.search.aggregator.core.Page;
 import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceIdName;
+import gr.uoa.di.madgik.registry.domain.Paging;
 import gr.uoa.di.madgik.registry.domain.ScoredResult;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -124,17 +125,20 @@ public class SearchAggregatorClient {
 
     /**
      * Every Configuration Template of an Interoperability Record, from whichever node owns it.
-     * Unwraps the aggregator's {@code Paging} envelope.
      */
-    @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> getConfigurationTemplatesByInteroperabilityRecordId(String prefix, String suffix) {
-        Optional<Map<String, Object>> body = getMap(
-                "/configurationTemplates/getAllByInteroperabilityRecordId/{prefix}/{suffix}", prefix, suffix);
-        if (body.isEmpty()) {
-            return Collections.emptyList();
+    public Paging<Map<String, Object>> getConfigurationTemplatesByInteroperabilityRecordId(String prefix, String suffix) {
+        try {
+            Paging<Map<String, Object>> body = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/configurationTemplates")
+                            .queryParam("interoperability_record_id", prefix + "/" + suffix)
+                            .build())
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<Paging<Map<String, Object>>>() {
+                    });
+            return body != null ? body : new Paging<>();
+        } catch (HttpClientErrorException.NotFound e) {
+            return new Paging<>();
         }
-        Object results = body.get().get("results");
-        return results instanceof List<?> list ? (List<Map<String, Object>>) (List<?>) list : Collections.emptyList();
     }
 
     /**

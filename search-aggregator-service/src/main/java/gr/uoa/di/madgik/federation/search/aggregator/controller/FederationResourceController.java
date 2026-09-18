@@ -106,10 +106,13 @@ public class FederationResourceController {
     }
 
     @Operation(summary = "Get all Configuration Templates of an Interoperability Record from whichever node owns it.")
-    @GetMapping(path = "configurationTemplates/getAllByInteroperabilityRecordId/{prefix}/{suffix}")
-    public ResponseEntity<Map<String, Object>> getConfigurationTemplatesByInteroperabilityRecordId(
-            @PathVariable String prefix, @PathVariable String suffix) {
-        return aggregatingService.getConfigurationTemplatesByInteroperabilityRecordId(prefix, suffix)
+    @GetMapping(path = "configurationTemplates")
+    public ResponseEntity<Map<String, Object>> getAll(@RequestParam("interoperability_record_id") String interoperabilityRecordId) {
+        String[] parts = interoperabilityRecordId.split("/", 2);
+        if (parts.length != 2) {
+            return ResponseEntity.badRequest().build();
+        }
+        return aggregatingService.getConfigurationTemplatesByInteroperabilityRecordId(parts[0], parts[1])
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
