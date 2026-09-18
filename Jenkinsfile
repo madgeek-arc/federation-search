@@ -1,7 +1,7 @@
 def DOCKER_IMAGE_SHA = ''
 
 pipeline {
-  agent any
+  agent { label 'master' }
 
   tools {
     jdk 'OpenJDK 25'
