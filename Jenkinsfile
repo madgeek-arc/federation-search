@@ -32,6 +32,12 @@ pipeline {
       }
     }
 
+    stage('Install Modules') {
+      steps {
+        sh './mvnw -B install -DskipTests'
+      }
+    }
+
     stage('Test and Build Image') {
       parallel {
 
@@ -81,7 +87,7 @@ pipeline {
           }
           steps {
             script {
-              sh "./mvnw -pl search-aggregator-service -am spring-boot:build-image -DskipTests"
+              sh "./mvnw -pl search-aggregator-service spring-boot:build-image -DskipTests"
               DOCKER_IMAGE_SHA = sh(script: "docker inspect --format='{{.Id}}' ${REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG} 2>/dev/null || true", returnStdout: true).trim()
             }
           }
