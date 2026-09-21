@@ -128,15 +128,15 @@ class AggregatingServiceTest {
         // Results with "name" nested under the resource type key "service"
         HighlightedResult<?> resZeta = mock(HighlightedResult.class);
         when(resZeta.getScore()).thenReturn(10.0f);
-        when(resZeta.getResult()).thenReturn(new HashMap<>(Map.of("id", "Z", "service", new HashMap<>(Map.of("name", "Zeta")))));
+        when(resZeta.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "Z","name", "Zeta")))));
 
         HighlightedResult<?> resAlpha = mock(HighlightedResult.class);
         when(resAlpha.getScore()).thenReturn(9.0f);
-        when(resAlpha.getResult()).thenReturn(new HashMap<>(Map.of("id", "A", "service", new HashMap<>(Map.of("name", "Alpha")))));
+        when(resAlpha.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "A","name", "Alpha")))));
 
         HighlightedResult<?> resMu = mock(HighlightedResult.class);
         when(resMu.getScore()).thenReturn(8.0f);
-        when(resMu.getResult()).thenReturn(new HashMap<>(Map.of("id", "M", "service", new HashMap<>(Map.of("name", "Mu")))));
+        when(resMu.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "M","name", "Mu")))));
 
         Paging<HighlightedResult<?>> paging = new Paging<>(3, 0, 3, List.of(resZeta, resAlpha, resMu), Collections.emptyList());
 

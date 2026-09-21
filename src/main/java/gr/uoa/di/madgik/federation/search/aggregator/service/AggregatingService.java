@@ -18,6 +18,7 @@ package gr.uoa.di.madgik.federation.search.aggregator.service;
 
 import gr.uoa.di.madgik.federation.search.aggregator.dto.AggregatedResult;
 import gr.uoa.di.madgik.federation.search.aggregator.dto.Page;
+import gr.uoa.di.madgik.federation.search.aggregator.util.BundledResourceUnwrapper;
 import gr.uoa.di.madgik.node.registry.client.Node;
 import gr.uoa.di.madgik.registry.domain.*;
 import org.slf4j.Logger;
@@ -85,7 +86,7 @@ public class AggregatingService {
                 fetchResultsPage(dataUrl).ifPresent(page -> {
                     List<HighlightedResult<?>> results = page.getResults();
                     if (results != null) {
-                        nodeResults.put(meta.url, results);
+                        nodeResults.put(meta.url, BundledResourceUnwrapper.unwrapIfEnclosed(results, resourceType, meta.url));
                     }
                 });
             }
@@ -110,6 +111,29 @@ public class AggregatingService {
         List<Node> nodes = nodeResolver.fetchNodes();
 
         return createPage(from, finalResults.size(), totalAvailable, finalResults, mergedFacets, nodes);
+    }
+
+    public Optional<Map<String, Object>> getResourceById(String resourceType, String prefix, String suffix) {
+        return nodeEndpointService.getResourceCatalogueEndpoints().parallelStream()
+                .map(base -> String.join("/", base, "public", resourceType, prefix, suffix))
+                .map(url -> {
+                    try {
+                        Map<String, Object> result = restClient.get()
+                                .uri(url)
+                                .accept(MediaType.APPLICATION_JSON)
+                                .retrieve()
+                                .body(new ParameterizedTypeReference<>() {});
+                        if (result == null) return Optional.<Map<String, Object>>empty();
+                        return Optional.of(BundledResourceUnwrapper.unwrapSingleIfEnclosed(result, resourceType));
+                    } catch (Exception e) {
+                        logger.warn("Skipping unavailable node during id fetch: {} ({})", url, describeException(e));
+                        logger.debug("Unavailable node details for {}", url, e);
+                        return Optional.<Map<String, Object>>empty();
+                    }
+                })
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     private Optional<APIPageMetadata> fetchPageMetadata(String endpoint, FacetFilter ff) {
