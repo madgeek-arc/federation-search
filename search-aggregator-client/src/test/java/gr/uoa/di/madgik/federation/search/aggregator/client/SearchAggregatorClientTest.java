@@ -19,7 +19,6 @@ package gr.uoa.di.madgik.federation.search.aggregator.client;
 import gr.uoa.di.madgik.federation.search.aggregator.core.AggregatedResult;
 import gr.uoa.di.madgik.federation.search.aggregator.core.Page;
 import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceIdName;
-import gr.uoa.di.madgik.registry.domain.Paging;
 import gr.uoa.di.madgik.registry.domain.ScoredResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -108,34 +107,6 @@ class SearchAggregatorClientTest {
         Optional<Map<String, Object>> result = client.getById("services", "21.T15", "missing");
 
         assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getConfigurationTemplatesByInteroperabilityRecordId_parsesPagingEnvelope() {
-        mockServer.expect(requestTo(BASE_URL + "/configurationTemplates?interoperability_record_id=21.T15/ir"))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess(
-                        "{\"total\":1,\"from\":0,\"to\":1,\"results\":[{\"id\":\"21.T15/ct\"}]}", MediaType.APPLICATION_JSON));
-
-        Paging<Map<String, Object>> result =
-                client.getConfigurationTemplatesByInteroperabilityRecordId("21.T15", "ir");
-
-        assertThat(result.getTotal()).isEqualTo(1);
-        assertThat(result.getResults()).hasSize(1);
-        assertThat(result.getResults().get(0).get("id")).isEqualTo("21.T15/ct");
-    }
-
-    @Test
-    void getConfigurationTemplatesByInteroperabilityRecordId_notFound_returnsEmptyPaging() {
-        mockServer.expect(requestTo(BASE_URL + "/configurationTemplates?interoperability_record_id=21.T15/missing"))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(withStatus(org.springframework.http.HttpStatus.NOT_FOUND));
-
-        Paging<Map<String, Object>> result =
-                client.getConfigurationTemplatesByInteroperabilityRecordId("21.T15", "missing");
-
-        assertThat(result.getTotal()).isZero();
-        assertThat(result.getResults()).isEmpty();
     }
 
     @Test

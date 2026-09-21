@@ -19,7 +19,6 @@ package gr.uoa.di.madgik.federation.search.aggregator.client;
 import gr.uoa.di.madgik.federation.search.aggregator.core.AggregatedResult;
 import gr.uoa.di.madgik.federation.search.aggregator.core.Page;
 import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceIdName;
-import gr.uoa.di.madgik.registry.domain.Paging;
 import gr.uoa.di.madgik.registry.domain.ScoredResult;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -110,35 +109,10 @@ public class SearchAggregatorClient {
     }
 
     /**
-     * A single Configuration Template by id, from whichever node owns it.
-     */
-    public Optional<Map<String, Object>> getConfigurationTemplate(String prefix, String suffix) {
-        return getMap("/configurationTemplates/{prefix}/{suffix}", prefix, suffix);
-    }
-
-    /**
      * The dynamic-form Model bound to a Configuration Template, from whichever node owns it.
      */
     public Optional<Map<String, Object>> getConfigurationTemplateModel(String prefix, String suffix) {
         return getMap("/configurationTemplates/{prefix}/{suffix}/model", prefix, suffix);
-    }
-
-    /**
-     * Every Configuration Template of an Interoperability Record, from whichever node owns it.
-     */
-    public Paging<Map<String, Object>> getConfigurationTemplatesByInteroperabilityRecordId(String prefix, String suffix) {
-        try {
-            Paging<Map<String, Object>> body = restClient.get()
-                    .uri(uriBuilder -> uriBuilder.path("/configurationTemplates")
-                            .queryParam("interoperability_record_id", prefix + "/" + suffix)
-                            .build())
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<Paging<Map<String, Object>>>() {
-                    });
-            return body != null ? body : new Paging<>();
-        } catch (HttpClientErrorException.NotFound e) {
-            return new Paging<>();
-        }
     }
 
     /**

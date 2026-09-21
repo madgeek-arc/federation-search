@@ -24,7 +24,6 @@ import gr.uoa.di.madgik.registry.domain.HighlightedResult;
 import gr.uoa.di.madgik.registry.domain.Paging;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestClient;
 
@@ -32,9 +31,7 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AggregatingServiceTest {
@@ -59,6 +56,7 @@ class AggregatingServiceTest {
     }
 
     @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
     void testRRFMerging() {
         // Prepare endpoints
         when(nodeEndpointService.getResourceCatalogueEndpoints()).thenReturn(List.of("node1", "node2"));
@@ -75,22 +73,22 @@ class AggregatingServiceTest {
         when(headersSpec.retrieve()).thenReturn(responseSpec);
 
         // Node 1 results
-        HighlightedResult<?> resA1 = mock(HighlightedResult.class);
+        HighlightedResult<Map> resA1 = mock(HighlightedResult.class);
         when(resA1.getScore()).thenReturn(10.0f);
         when(resA1.getResult()).thenReturn(new HashMap<>(Map.of("id", "A1")));
 
-        HighlightedResult<?> resA2 = mock(HighlightedResult.class);
+        HighlightedResult<Map> resA2 = mock(HighlightedResult.class);
         when(resA2.getScore()).thenReturn(9.0f);
         when(resA2.getResult()).thenReturn(new HashMap<>(Map.of("id", "A2")));
 
         Paging<HighlightedResult<?>> paging1 = new Paging<>(2, 0, 2, List.of(resA1, resA2), Collections.emptyList());
 
         // Node 2 results
-        HighlightedResult<?> resB1 = mock(HighlightedResult.class);
+        HighlightedResult<Map> resB1 = mock(HighlightedResult.class);
         when(resB1.getScore()).thenReturn(10.0f);
         when(resB1.getResult()).thenReturn(new HashMap<>(Map.of("id", "B1")));
 
-        HighlightedResult<?> resA1_again = mock(HighlightedResult.class);
+        HighlightedResult<Map> resA1_again = mock(HighlightedResult.class);
         when(resA1_again.getScore()).thenReturn(8.0f);
         when(resA1_again.getResult()).thenReturn(new HashMap<>(Map.of("id", "A1")));
 
@@ -132,6 +130,7 @@ class AggregatingServiceTest {
     }
 
     @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
     void testSortByNestedField() {
         when(nodeEndpointService.getResourceCatalogueEndpoints()).thenReturn(List.of("node1"));
         when(nodeResolver.fetchNodes()).thenReturn(Collections.emptyList());
@@ -146,15 +145,15 @@ class AggregatingServiceTest {
         when(headersSpec.retrieve()).thenReturn(responseSpec);
 
         // Results with "name" nested under the resource type key "service"
-        HighlightedResult<?> resZeta = mock(HighlightedResult.class);
+        HighlightedResult<Map> resZeta = mock(HighlightedResult.class);
         when(resZeta.getScore()).thenReturn(10.0f);
         when(resZeta.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "Z","name", "Zeta")))));
 
-        HighlightedResult<?> resAlpha = mock(HighlightedResult.class);
+        HighlightedResult<Map> resAlpha = mock(HighlightedResult.class);
         when(resAlpha.getScore()).thenReturn(9.0f);
         when(resAlpha.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "A","name", "Alpha")))));
 
-        HighlightedResult<?> resMu = mock(HighlightedResult.class);
+        HighlightedResult<Map> resMu = mock(HighlightedResult.class);
         when(resMu.getScore()).thenReturn(8.0f);
         when(resMu.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "M","name", "Mu")))));
 
@@ -180,6 +179,7 @@ class AggregatingServiceTest {
     }
 
     @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
     void listResourceIdsAndNames_dedupsAndSortsByName_unwrappingEnclosedPayloads() {
         when(nodeEndpointService.getResourceCatalogueEndpoints()).thenReturn(List.of("node1", "node2"));
 
@@ -193,13 +193,13 @@ class AggregatingServiceTest {
         when(headersSpec.retrieve()).thenReturn(responseSpec);
 
         // Nodes enclose the payload under the resource-type key ("service"), like the real API.
-        HighlightedResult<?> zeta = mock(HighlightedResult.class);
+        HighlightedResult<Map> zeta = mock(HighlightedResult.class);
         when(zeta.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "n/zeta", "name", "Zeta")))));
-        HighlightedResult<?> alpha = mock(HighlightedResult.class);
+        HighlightedResult<Map> alpha = mock(HighlightedResult.class);
         when(alpha.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "n/alpha", "name", "Alpha")))));
-        HighlightedResult<?> alphaDup = mock(HighlightedResult.class);
+        HighlightedResult<Map> alphaDup = mock(HighlightedResult.class);
         when(alphaDup.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "n/alpha", "name", "Alpha")))));
-        HighlightedResult<?> mu = mock(HighlightedResult.class);
+        HighlightedResult<Map> mu = mock(HighlightedResult.class);
         when(mu.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "n/mu", "name", "Mu")))));
 
         Paging<HighlightedResult<?>> node1Page = new Paging<>(2, 0, 2, List.of(zeta, alpha), Collections.emptyList());
@@ -239,32 +239,4 @@ class AggregatingServiceTest {
         assertThat(model.get().get("name")).isEqualTo("CT model");
     }
 
-    @Test
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    void getConfigurationTemplatesByInteroperabilityRecordId_skipsNodesWithEmptyResults() {
-        when(nodeEndpointService.getResourceCatalogueEndpoints()).thenReturn(List.of("node1", "node2"));
-
-        RestClient.RequestHeadersUriSpec getSpec = mock(RestClient.RequestHeadersUriSpec.class);
-        RestClient.RequestHeadersSpec headersSpec = mock(RestClient.RequestHeadersSpec.class);
-        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
-        when(restClient.get()).thenReturn(getSpec);
-        when(getSpec.uri(anyString())).thenReturn(headersSpec);
-        when(headersSpec.accept(any())).thenReturn(headersSpec);
-        when(headersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.body(any(ParameterizedTypeReference.class)))
-                .thenReturn(new HashMap<>(Map.of("results", List.of())))
-                .thenReturn(new HashMap<>(Map.of("results", List.of(Map.of("id", "con/x")))));
-
-        Optional<Map<String, Object>> body =
-                aggregatingService.getConfigurationTemplatesByInteroperabilityRecordId("21.T15", "ir1");
-
-        assertThat(body).isPresent();
-        assertThat((List<?>) body.get().get("results")).hasSize(1);
-
-        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
-        verify(getSpec, atLeastOnce()).uri(urlCaptor.capture());
-        assertThat(urlCaptor.getAllValues())
-                .allSatisfy(url -> assertThat(url)
-                        .contains("/public/configurationTemplate/all?interoperability_record_id=21.T15/ir1"));
-    }
 }
