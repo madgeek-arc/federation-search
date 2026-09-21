@@ -74,13 +74,13 @@ scoring.rrf.k=20
 2. Start the service:
    <!-- x-release-please-start-version -->
    ```
-   java -jar target/search-aggregator-1.2.1-SNAPSHOT
+   java -jar target/search-aggregator-1.3.0
    ```
    To supply an external configuration file at runtime:
    <!-- x-release-please-end -->
    <!-- x-release-please-start-version -->
    ```
-   java -jar target/search-aggregator-1.2.1-SNAPSHOT \
+   java -jar target/search-aggregator-1.3.0 \
      --spring.config.location=file:/path/to/application.properties
    ```
    <!-- x-release-please-end -->
