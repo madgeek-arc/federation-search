@@ -105,18 +105,6 @@ public class FederationResourceController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Get all Configuration Templates of an Interoperability Record from whichever node owns it.")
-    @GetMapping(path = "configurationTemplates")
-    public ResponseEntity<Map<String, Object>> getAll(@RequestParam("interoperability_record_id") String interoperabilityRecordId) {
-        String[] parts = interoperabilityRecordId.split("/", 2);
-        if (parts.length != 2) {
-            return ResponseEntity.badRequest().build();
-        }
-        return aggregatingService.getConfigurationTemplatesByInteroperabilityRecordId(parts[0], parts[1])
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
     @Operation(summary = "Get the Model bound to a Configuration Template from whichever node owns it.")
     @GetMapping(path = "configurationTemplates/{prefix}/{suffix}/model")
     public ResponseEntity<Map<String, Object>> getConfigurationTemplateModel(@PathVariable String prefix,
