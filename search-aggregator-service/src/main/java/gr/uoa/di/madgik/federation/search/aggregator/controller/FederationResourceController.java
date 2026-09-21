@@ -31,17 +31,18 @@ import java.util.Map;
 @RequestMapping(path = "federation", produces = {MediaType.APPLICATION_JSON_VALUE})
 public class FederationResourceController {
 
-    private static final Map<String, String> COLLECTION_TO_RESOURCE_TYPE = Map.of(
-            "adapters",                        "adapter",
-            "catalogues",                      "catalogue",
-            "configurationTemplateInstances",  "configurationTemplateInstance",
-            "datasources",                     "datasource",
-            "deployableApplications",          "deployableApplication",
-            "interoperabilityRecords",         "interoperabilityRecord",
-            "organisations",                   "organisation",
-            "resourceInteroperabilityRecords", "resourceInteroperabilityRecord",
-            "services",                        "service",
-            "trainingResources",               "trainingResource"
+    private static final Map<String, String> COLLECTION_TO_RESOURCE_TYPE = Map.ofEntries(
+            Map.entry("adapters",                        "adapter"),
+            Map.entry("catalogues",                      "catalogue"),
+            Map.entry("configurationTemplates",          "configurationTemplate"),
+            Map.entry("configurationTemplateInstances",  "configurationTemplateInstance"),
+            Map.entry("datasources",                     "datasource"),
+            Map.entry("deployableApplications",          "deployableApplication"),
+            Map.entry("interoperabilityRecords",         "interoperabilityRecord"),
+            Map.entry("organisations",                   "organisation"),
+            Map.entry("resourceInteroperabilityRecords", "resourceInteroperabilityRecord"),
+            Map.entry("services",                        "service"),
+            Map.entry("trainingResources",               "trainingResource")
     );
 
     // The resourceType each node's own generic-resource service registers internally
@@ -92,15 +93,6 @@ public class FederationResourceController {
             return ResponseEntity.badRequest().build();
         }
         return aggregatingService.getResourceById(resourceType, prefix, suffix)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @Operation(summary = "Get a single Configuration Template by id from whichever node owns it.")
-    @GetMapping(path = "configurationTemplates/{prefix}/{suffix}")
-    public ResponseEntity<Map<String, Object>> getConfigurationTemplate(@PathVariable String prefix,
-                                                                        @PathVariable String suffix) {
-        return aggregatingService.getConfigurationTemplateById(prefix, suffix)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

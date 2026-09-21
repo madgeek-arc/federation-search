@@ -224,16 +224,6 @@ public class AggregatingService {
     }
 
     /**
-     * Fetches a single Configuration Template by id from whichever node owns it, from that node's
-     * public layer - a cross-node read only ever sees public layers, and the id that flows through
-     * the federation is the template's public (bare) PID.
-     */
-    public Optional<Map<String, Object>> getConfigurationTemplateById(String prefix, String suffix) {
-        return firstNonNullFromNodes(base ->
-                String.join("/", base, "public", "configurationTemplate", prefix, suffix));
-    }
-
-    /**
      * Fetches the dynamic-form Model bound to a Configuration Template, from whichever node owns
      * the template. The Model itself is a node-local resource; the owning node serves it through
      * its {@code public/configurationTemplate/{prefix}/{suffix}/model} route, keyed by the

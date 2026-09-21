@@ -174,6 +174,23 @@ class FederationSearchIntegrationTest {
         assertThat(body).extracting(m -> m.get("name")).containsExactly("Alpha", "Mu", "Zeta");
     }
 
+    @Test
+    void getConfigurationTemplateById_routesThroughGenericCollectionLookup() {
+        String nodeA = "http://localhost:" + wireMock.port() + "/node-a";
+        when(nodeEndpointService.getResourceCatalogueEndpoints()).thenReturn(List.of(nodeA));
+
+        wireMock.stubFor(get(urlPathEqualTo("/node-a/public/configurationTemplate/21.T15/ct"))
+                .willReturn(ok("""
+                        {"id":"21.T15/ct","name":"A Template"}
+                        """).withHeader("Content-Type", "application/json")));
+
+        Map<?, ?> body = client.get().uri("/federation/configurationTemplates/21.T15/ct")
+                .retrieve().body(Map.class);
+
+        assertThat(body).isNotNull();
+        assertThat(body.get("id")).isEqualTo("21.T15/ct");
+    }
+
     private void stubNode(String path, int total, String resultsJson) {
         wireMock.stubFor(get(urlPathEqualTo(path))
                 .withQueryParam("quantity", equalTo("0"))
