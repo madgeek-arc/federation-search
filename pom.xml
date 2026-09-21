@@ -9,7 +9,7 @@
 	</parent>
 	<groupId>gr.uoa.di.madgik.federation</groupId>
 	<artifactId>search-aggregator</artifactId>
-	<version>2.0.0-SNAPSHOT</version>
+	<version>${revision}</version>
 	<packaging>pom</packaging>
 	<name>Federation Search Aggregator</name>
 	<description>Aggregates search results from multiple Resource Catalogue nodes into a single federation API endpoint.</description>
@@ -34,10 +34,12 @@
 	</modules>
 
 	<properties>
+		<revision>2.0.0-SNAPSHOT</revision>
 		<java.version>25</java.version>
 		<registry-core.version>5.0.0-SNAPSHOT</registry-core.version>
 		<spring-boot.build-image.imageName>docker.madgik.di.uoa.gr/federation-search-aggregator:${project.version}</spring-boot.build-image.imageName>
 		<dependency-check.version>13.0.0</dependency-check.version>
+		<flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
 	</properties>
 
 	<dependencyManagement>
@@ -124,6 +126,31 @@
 					<format>ALL</format>
 					<prettyPrint>true</prettyPrint>
 				</configuration>
+			</plugin>
+			<plugin>
+				<!-- Resolves the ${revision} placeholder in installed/deployed POMs, so consumers see a real version -->
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>flatten-maven-plugin</artifactId>
+				<version>${flatten-maven-plugin.version}</version>
+				<configuration>
+					<flattenMode>resolveCiFriendliesOnly</flattenMode>
+				</configuration>
+				<executions>
+					<execution>
+						<id>flatten</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>flatten</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>flatten.clean</id>
+						<phase>clean</phase>
+						<goals>
+							<goal>clean</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
