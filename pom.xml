@@ -34,7 +34,7 @@
 	</modules>
 
 	<properties>
-		<revision>2.0.0-SNAPSHOT</revision>
+		<revision>2.0.0-SNAPSHOT</revision><!-- x-release-please-version -->
 		<java.version>25</java.version>
 		<registry-core.version>5.0.0-SNAPSHOT</registry-core.version>
 		<spring-boot.build-image.imageName>docker.madgik.di.uoa.gr/federation-search-aggregator:${project.version}</spring-boot.build-image.imageName>
