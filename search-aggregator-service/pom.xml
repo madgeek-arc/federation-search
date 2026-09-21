@@ -78,6 +78,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
+					<skip>false</skip>
 					<image>
 						<name>${spring-boot.build-image.imageName}</name>
 						<cleanCache>true</cleanCache>
