@@ -1,7 +1,11 @@
 def DOCKER_IMAGE_SHA = ''
 
 pipeline {
-  agent any
+  agent { label 'master' }
+
+  tools {
+    jdk 'OpenJDK 25'
+  }
 
   options {
     buildDiscarder(logRotator(numToKeepStr: '20'))
@@ -77,12 +81,24 @@ pipeline {
           }
           steps {
             script {
-              sh "./mvnw spring-boot:build-image -DskipTests"
+              sh "./mvnw -pl search-aggregator-service -am spring-boot:build-image -DskipTests"
               DOCKER_IMAGE_SHA = sh(script: "docker inspect --format='{{.Id}}' ${REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG} 2>/dev/null || true", returnStdout: true).trim()
             }
           }
         }
 
+      }
+    }
+
+    stage('Deploy Artifacts') {
+      when {
+        anyOf {
+          expression { return DOCKER_TAG.endsWith('-SNAPSHOT') } // deploy all snapshots
+          expression { return env.TAG_NAME != null } // deploy only tag build as release
+        }
+      }
+      steps {
+        sh './mvnw deploy -DskipTests'
       }
     }
 

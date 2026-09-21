@@ -4,12 +4,13 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.7</version>
+		<version>4.0.8</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>gr.uoa.di.madgik.federation</groupId>
 	<artifactId>search-aggregator</artifactId>
 	<version>1.2.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
 	<name>Federation Search Aggregator</name>
 	<description>Aggregates search results from multiple Resource Catalogue nodes into a single federation API endpoint.</description>
 	<url/>
@@ -25,68 +26,63 @@
 		<tag/>
 		<url/>
 	</scm>
-	<properties>
-		<java.version>21</java.version>
-		<registry-core.version>4.1.0</registry-core.version>
-		<spring-boot.build-image.imageName>docker.madgik.di.uoa.gr/federation-search-aggregator:${project.version}</spring-boot.build-image.imageName>
-		<dependency-check.version>12.2.2</dependency-check.version>
-	</properties>
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.wiremock</groupId>
-			<artifactId>wiremock-standalone</artifactId>
-			<version>3.9.1</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>3.0.3</version>
-		</dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-        </dependency>
 
-		<dependency>
-			<groupId>gr.uoa.di.madgik</groupId>
-			<artifactId>registry-core-api</artifactId>
-			<version>${registry-core.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>gr.uoa.di.madgik</groupId>
-			<artifactId>registry-core-rest</artifactId>
-			<version>${registry-core.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>gr.uoa.di.madgik</groupId>
-			<artifactId>eosc-node-registry-client</artifactId>
-			<version>1.1.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-cache</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.github.ben-manes.caffeine</groupId>
-			<artifactId>caffeine</artifactId>
-		</dependency>
-	</dependencies>
+	<modules>
+		<module>search-aggregator-core</module>
+		<module>search-aggregator-client</module>
+		<module>search-aggregator-service</module>
+	</modules>
+
+	<properties>
+		<java.version>25</java.version>
+		<registry-core.version>5.0.0-SNAPSHOT</registry-core.version>
+		<spring-boot.build-image.imageName>docker.madgik.di.uoa.gr/federation-search-aggregator:${project.version}</spring-boot.build-image.imageName>
+		<dependency-check.version>13.0.0</dependency-check.version>
+	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>gr.uoa.di.madgik.federation</groupId>
+				<artifactId>search-aggregator-core</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>gr.uoa.di.madgik.federation</groupId>
+				<artifactId>search-aggregator-client</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>gr.uoa.di.madgik</groupId>
+				<artifactId>registry-core-api</artifactId>
+				<version>${registry-core.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>gr.uoa.di.madgik</groupId>
+				<artifactId>registry-core-rest</artifactId>
+				<version>${registry-core.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>gr.uoa.di.madgik</groupId>
+				<artifactId>eosc-node-registry-client</artifactId>
+				<version>1.1.0</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-maven-plugin</artifactId>
+					<configuration>
+						<!-- Only search-aggregator-service builds a Spring Boot artifact/image -->
+						<skip>true</skip>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.jacoco</groupId>
@@ -129,23 +125,6 @@
 					<prettyPrint>true</prettyPrint>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-				<configuration>
-					<image>
-						<name>${spring-boot.build-image.imageName}</name>
-						<cleanCache>true</cleanCache>
-						<buildpacks>
-							<buildpack>docker://docker.io/paketobuildpacks/java</buildpack>
-							<buildpack>docker://docker.io/paketobuildpacks/health-checker:latest</buildpack>
-						</buildpacks>
-						<env>
-							<BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
-						</env>
-					</image>
-				</configuration>
-			</plugin>
 		</plugins>
 	</build>
 
@@ -173,5 +152,16 @@
 			</snapshots>
 		</repository>
 	</repositories>
+
+	<distributionManagement>
+		<repository>
+			<id>madgik-releases</id>
+			<url>https://repo.madgik.di.uoa.gr/content/repositories/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>madgik-snapshots</id>
+			<url>https://repo.madgik.di.uoa.gr/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
 
 </project>
