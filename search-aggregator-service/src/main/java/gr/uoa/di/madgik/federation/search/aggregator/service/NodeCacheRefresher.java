@@ -16,9 +16,14 @@
 
 package gr.uoa.di.madgik.federation.search.aggregator.service;
 
+import gr.uoa.di.madgik.node.registry.client.Node;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.interceptor.SimpleKey;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class NodeCacheRefresher {
@@ -33,13 +38,24 @@ public class NodeCacheRefresher {
         this.cacheManager = cacheManager;
     }
 
+    /*
+     * Fetches directly (bypassing the "nodes" cache) and only overwrites the cached entry on
+     * success. A failed registry call leaves the previously cached node list in place instead of
+     * wiping it, so a registry blip degrades to "serving a slightly stale but known-good node
+     * list" rather than "empty node list until the registry recovers".
+     */
     @Scheduled(fixedRateString = "#{${node.cache.refresh-rate-minutes:5} * 60000}")
     public void refresh() {
         LOGGER.log(System.Logger.Level.INFO, "Refreshing nodes cache");
-        var cache = cacheManager.getCache("nodes");
-        if (cache != null) {
-            cache.clear();
+        List<Node> nodes = nodeResolver.fetchNodesOrNull();
+        if (nodes == null) {
+            LOGGER.log(System.Logger.Level.WARNING,
+                    "Node registry unreachable; keeping previously cached node list");
+            return;
         }
-        nodeResolver.fetchNodes();
+        Cache cache = cacheManager.getCache("nodes");
+        if (cache != null) {
+            cache.put(SimpleKey.EMPTY, nodes);
+        }
     }
 }
