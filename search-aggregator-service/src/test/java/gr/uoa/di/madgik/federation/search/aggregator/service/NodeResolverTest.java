@@ -35,7 +35,7 @@ class NodeResolverTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        resolver = new NodeResolver("http://dummy", "dummy-key");
+        resolver = new NodeResolver("http://dummy", "dummy-key", 2000L, 5000L);
         mockClient = mock(NodeRegistryClient.class);
         Field clientField = NodeResolver.class.getDeclaredField("client");
         clientField.setAccessible(true);
@@ -59,5 +59,17 @@ class NodeResolverTest {
         assertThat(result).containsExactly(node);
         assertThatThrownBy(() -> result.add(new Node()))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void fetchNodesReturnsEmptyListWhenClientThrows() {
+        when(mockClient.fetchNodes()).thenThrow(new RuntimeException("registry unreachable"));
+        assertThat(resolver.fetchNodes()).isEmpty();
+    }
+
+    @Test
+    void fetchNodesOrNullReturnsNullWhenClientThrows() {
+        when(mockClient.fetchNodes()).thenThrow(new RuntimeException("registry unreachable"));
+        assertThat(resolver.fetchNodesOrNull()).isNull();
     }
 }
