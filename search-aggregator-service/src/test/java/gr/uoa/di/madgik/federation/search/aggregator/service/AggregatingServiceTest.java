@@ -194,7 +194,7 @@ class AggregatingServiceTest {
 
         // Nodes enclose the payload under the resource-type key ("service"), like the real API.
         HighlightedResult<Map> zeta = mock(HighlightedResult.class);
-        when(zeta.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "n/zeta", "name", "Zeta")))));
+        when(zeta.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "n/zeta", "name", "Zeta", "nodePID", "21.T/node-1")))));
         HighlightedResult<Map> alpha = mock(HighlightedResult.class);
         when(alpha.getResult()).thenReturn(new HashMap<>(Map.of("service", new HashMap<>(Map.of("id", "n/alpha", "name", "Alpha")))));
         HighlightedResult<Map> alphaDup = mock(HighlightedResult.class);
@@ -215,6 +215,8 @@ class AggregatingServiceTest {
 
         assertThat(result).extracting("id").containsExactly("n/alpha", "n/mu", "n/zeta");
         assertThat(result).extracting("name").containsExactly("Alpha", "Mu", "Zeta");
+        // nodePID is carried through when the node exposes it, and null when it does not
+        assertThat(result).extracting("nodePID").containsExactly(null, null, "21.T/node-1");
     }
 
     @Test

@@ -66,6 +66,19 @@ class SearchAggregatorClientTest {
     }
 
     @Test
+    void listResourceIds_parsesNodePid() {
+        mockServer.expect(requestTo(BASE_URL + "/services/ids"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(
+                        "[{\"id\":\"21.T15/svc\",\"name\":\"A Service\",\"nodePID\":\"21.T15999/node-a\"}]",
+                        MediaType.APPLICATION_JSON));
+
+        List<ResourceIdName> result = client.listResourceIds("services", null);
+
+        assertThat(result).containsExactly(new ResourceIdName("21.T15/svc", "A Service", "21.T15999/node-a"));
+    }
+
+    @Test
     void browse_parsesPagedResultsAndMetadata() {
         mockServer.expect(requestTo(BASE_URL + "/services?suspended=false"))
                 .andExpect(method(HttpMethod.GET))

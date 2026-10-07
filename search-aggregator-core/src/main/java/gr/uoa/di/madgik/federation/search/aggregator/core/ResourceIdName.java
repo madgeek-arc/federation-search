@@ -22,6 +22,17 @@ package gr.uoa.di.madgik.federation.search.aggregator.core;
  * running Reciprocal Rank Fusion, or merging facets. See
  * {@code AggregatingService#listResourceIdsAndNames} and
  * {@code SearchAggregatorClient#listResourceIds}.
+ * <p>
+ * {@code nodePID} identifies the node the resource is published on, so a dropdown can tell
+ * apart resources coming from different nodes. It is {@code null} when the owning node does
+ * not expose it.
  */
-public record ResourceIdName(String id, String name) {
+public record ResourceIdName(String id, String name, String nodePID) {
+
+    /**
+     * Backwards-compatible constructor for callers that have no node information.
+     */
+    public ResourceIdName(String id, String name) {
+        this(id, name, null);
+    }
 }

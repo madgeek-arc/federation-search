@@ -184,7 +184,11 @@ public class AggregatingService {
                                 continue;
                             }
                             Object name = map.get("name");
-                            out.add(new ResourceIdName(id.toString(), name != null ? name.toString() : id.toString()));
+                            Object nodePID = map.get("nodePID");
+                            out.add(new ResourceIdName(
+                                    id.toString(),
+                                    name != null ? name.toString() : id.toString(),
+                                    nodePID != null ? nodePID.toString() : null));
                         }
                     }
                     return out;
