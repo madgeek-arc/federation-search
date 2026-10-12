@@ -18,7 +18,7 @@ package gr.uoa.di.madgik.federation.search.aggregator.service;
 
 import gr.uoa.di.madgik.federation.search.aggregator.core.AggregatedResult;
 import gr.uoa.di.madgik.federation.search.aggregator.core.Page;
-import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceIdName;
+import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceSummary;
 import gr.uoa.di.madgik.federation.search.aggregator.util.BundledResourceUnwrapper;
 import gr.uoa.di.madgik.node.registry.client.Node;
 import gr.uoa.di.madgik.registry.domain.*;
@@ -46,7 +46,7 @@ public class AggregatingService {
     private final ScoringService scoringService;
 
     /**
-     * Upper bound on how many records the {@link #listResourceIdsAndNames} fan-out pulls from a
+     * Upper bound on how many records the {@link #listResourceSummaries} fan-out pulls from a
      * single node. A relational-field dropdown needs the whole federation-wide inventory, so this
      * is deliberately high; it exists only to stop a misbehaving node from streaming an unbounded
      * response into the aggregator.
@@ -126,11 +126,11 @@ public class AggregatingService {
 
     /**
      * Returns every resource of {@code resourceType} across the federation as a de-duplicated,
-     * name-sorted list of {@code {id, name}} pairs - the minimum a node needs to populate a
+     * name-sorted list of {@link ResourceSummary} entries (id, name, nodePID, description) - the minimum a node needs to populate a
      * relational-field dropdown that can reference resources living on other nodes.
      * <p>
      * Unlike {@link #getMergedPagedResults}, this does a single fan-out round (no metadata phase),
-     * projects each node's hits down to id + name <em>before</em> merging so full payloads are
+     * projects each node's hits down to a {@link ResourceSummary} <em>before</em> merging so full payloads are
      * never held in aggregate, and skips Reciprocal Rank Fusion / facet merging entirely (a
      * picker wants a stable alphabetical list, not a relevance ranking). The result is cached
      * per {@code resourceType}/{@code query} so the fan-out runs once per TTL for the whole
@@ -138,10 +138,11 @@ public class AggregatingService {
      *
      * @param query optional free-text filter passed through to each node's search as a keyword;
      *              {@code null}/blank returns the full inventory.
+     * @return the de-duplicated (first occurrence of an id wins), name-sorted summaries
      */
     @Cacheable(cacheNames = "federationResourceIds",
             key = "#resourceType + '|' + (#query == null ? '' : #query.trim())")
-    public List<ResourceIdName> listResourceIdsAndNames(String resourceType, String query) {
+    public List<ResourceSummary> listResourceSummaries(String resourceType, String query) {
         FacetFilter ff = new FacetFilter();
         ff.setFrom(0);
         ff.setQuantity(resourceIdsMaxPerNode);
@@ -153,13 +154,13 @@ public class AggregatingService {
                 .map(base -> String.join("/", base, "public", resourceType, "search"))
                 .toList();
 
-        List<ResourceIdName> all = endpoints.parallelStream()
-                .flatMap(endpoint -> fetchIdNames(
+        List<ResourceSummary> all = endpoints.parallelStream()
+                .flatMap(endpoint -> fetchSummaries(
                         buildUrlWithFacetFilter(endpoint, ff, 0, resourceIdsMaxPerNode), resourceType).stream())
                 .toList();
 
-        Map<String, ResourceIdName> byId = new LinkedHashMap<>();
-        for (ResourceIdName r : all) {
+        Map<String, ResourceSummary> byId = new LinkedHashMap<>();
+        for (ResourceSummary r : all) {
             byId.putIfAbsent(r.id(), r);
         }
         return byId.values().stream()
@@ -167,29 +168,33 @@ public class AggregatingService {
                 .toList();
     }
 
-    private List<ResourceIdName> fetchIdNames(String url, String resourceType) {
+    private List<ResourceSummary> fetchSummaries(String url, String resourceType) {
         return fetchPage(url, FetchPhase.DATA)
-                .map(page -> {
-                    List<HighlightedResult<?>> results = page.getResults();
-                    if (results == null || results.isEmpty()) {
-                        return Collections.<ResourceIdName>emptyList();
-                    }
-                    List<HighlightedResult<?>> unwrapped =
-                            BundledResourceUnwrapper.unwrapIfEnclosed(results, resourceType, url);
-                    List<ResourceIdName> out = new ArrayList<>(unwrapped.size());
-                    for (HighlightedResult<?> r : unwrapped) {
-                        if (r.getResult() instanceof Map<?, ?> map) {
-                            Object id = map.get("id");
-                            if (id == null) {
-                                continue;
-                            }
-                            Object name = map.get("name");
-                            out.add(new ResourceIdName(id.toString(), name != null ? name.toString() : id.toString()));
-                        }
-                    }
-                    return out;
-                })
+                .map(Paging::getResults)
+                .filter(results -> results != null && !results.isEmpty())
+                .map(results -> BundledResourceUnwrapper.unwrapIfEnclosed(results, resourceType, url))
+                .map(unwrapped -> unwrapped.stream()
+                        .filter(Objects::nonNull)
+                        .map(HighlightedResult::getResult)
+                        .map(AggregatingService::toSummary)
+                        .flatMap(Optional::stream)
+                        .toList())
                 .orElseGet(Collections::emptyList);
+    }
+
+    private static Optional<ResourceSummary> toSummary(Object result) {
+        if (!(result instanceof Map<?, ?> map) || map.get("id") == null) {
+            return Optional.empty();
+        }
+        String id = map.get("id").toString();
+        Object name = map.get("name");
+        Object nodePID = map.get("nodePID");
+        Object description = map.get("description");
+        return Optional.of(new ResourceSummary(
+                id,
+                name != null ? name.toString() : id,
+                nodePID != null ? nodePID.toString() : null,
+                description != null ? description.toString() : null));
     }
 
     /**

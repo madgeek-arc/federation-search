@@ -16,7 +16,7 @@
 
 package gr.uoa.di.madgik.federation.search.aggregator.controller;
 
-import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceIdName;
+import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceSummary;
 import gr.uoa.di.madgik.federation.search.aggregator.service.AggregatingService;
 import gr.uoa.di.madgik.registry.domain.ScoredResult;
 import io.swagger.v3.oas.annotations.Operation;
@@ -71,16 +71,31 @@ public class FederationResourceController {
     }
 
     @Operation(summary = "List every resource of the given collection across the federation as "
-            + "lightweight {id, name} pairs, for populating relational-field dropdowns. "
+            + "lightweight {id, name, nodePID, description} summaries, for populating relational-field dropdowns. "
             + "De-duplicated and name-sorted; cached; optional free-text 'query' filter.")
-    @GetMapping(path = "{collection}/ids")
-    public ResponseEntity<List<ResourceIdName>> listResourceIds(@PathVariable String collection,
+    @GetMapping(path = "{collection}/list")
+    public ResponseEntity<List<ResourceSummary>> listResources(@PathVariable String collection,
                                                                @RequestParam(required = false) String query) {
         String resourceType = COLLECTION_TO_RESOURCE_TYPE.get(collection);
         if (resourceType == null) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(aggregatingService.listResourceIdsAndNames(resourceType, query));
+        return ResponseEntity.ok(aggregatingService.listResourceSummaries(resourceType, query));
+    }
+
+    /**
+     * Legacy alias of {@link #listResources}, kept so clients that still call
+     * {@code GET {collection}/ids} keep working while the service and its clients are
+     * deployed independently.
+     *
+     * @deprecated use {@code GET {collection}/list}
+     */
+    @Deprecated
+    @Operation(summary = "Deprecated alias of '{collection}/list'; use that instead.", deprecated = true)
+    @GetMapping(path = "{collection}/ids")
+    public ResponseEntity<List<ResourceSummary>> listResourceIds(@PathVariable String collection,
+                                                                 @RequestParam(required = false) String query) {
+        return listResources(collection, query);
     }
 
     @Operation(summary = "Get a single resource by ID.")

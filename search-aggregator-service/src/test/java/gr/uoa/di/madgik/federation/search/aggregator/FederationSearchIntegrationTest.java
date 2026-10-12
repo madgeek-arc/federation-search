@@ -147,7 +147,7 @@ class FederationSearchIntegrationTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void listResourceIds_projectsDedupsAndSortsAcrossNodes() {
+    void listResources_projectsDedupsAndSortsAcrossNodes() {
         String nodeA = "http://localhost:" + wireMock.port() + "/node-a";
         String nodeB = "http://localhost:" + wireMock.port() + "/node-b";
         when(nodeEndpointService.getResourceCatalogueEndpoints()).thenReturn(List.of(nodeA, nodeB));
@@ -166,12 +166,17 @@ class FederationSearchIntegrationTest {
                           {"score":1.0,"result":{"id":"svc-m","name":"Mu"},"highlights":[]}],"facets":[]}
                         """).withHeader("Content-Type", "application/json")));
 
-        List<Map<String, Object>> body = client.get().uri("/federation/services/ids")
+        List<Map<String, Object>> body = client.get().uri("/federation/services/list")
                 .retrieve().body(List.class);
 
         assertThat(body).isNotNull();
         assertThat(body).extracting(m -> m.get("id")).containsExactly("svc-a", "svc-m", "svc-z");
         assertThat(body).extracting(m -> m.get("name")).containsExactly("Alpha", "Mu", "Zeta");
+
+        // the deprecated /ids alias serves the same payload
+        List<Map<String, Object>> legacy = client.get().uri("/federation/services/ids")
+                .retrieve().body(List.class);
+        assertThat(legacy).isEqualTo(body);
     }
 
     @Test

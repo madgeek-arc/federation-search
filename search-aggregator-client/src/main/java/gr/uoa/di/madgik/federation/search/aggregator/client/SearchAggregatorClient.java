@@ -18,7 +18,7 @@ package gr.uoa.di.madgik.federation.search.aggregator.client;
 
 import gr.uoa.di.madgik.federation.search.aggregator.core.AggregatedResult;
 import gr.uoa.di.madgik.federation.search.aggregator.core.Page;
-import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceIdName;
+import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceSummary;
 import gr.uoa.di.madgik.registry.domain.ScoredResult;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -68,15 +68,19 @@ public class SearchAggregatorClient {
 
     /**
      * Every resource of {@code collection} across the federation, as a de-duplicated,
-     * name-sorted {@code {id, name}} list. {@code query} is an optional free-text filter.
+     * name-sorted list of {@link ResourceSummary} (id, name, nodePID, description).
+     *
+     * @param collection the collection to list
+     * @param query      optional free-text filter
+     * @return the summaries, or an empty list if the response has no body
      */
-    public List<ResourceIdName> listResourceIds(String collection, String query) {
-        List<ResourceIdName> body = restClient.get()
+    public List<ResourceSummary> listResources(String collection, String query) {
+        List<ResourceSummary> body = restClient.get()
                 .uri(uriBuilder -> uriBuilder.path("/{collection}/ids")
                         .queryParamIfPresent("query", Optional.ofNullable(query))
                         .build(collection))
                 .retrieve()
-                .body(new ParameterizedTypeReference<List<ResourceIdName>>() {
+                .body(new ParameterizedTypeReference<List<ResourceSummary>>() {
                 });
         return body != null ? body : Collections.emptyList();
     }

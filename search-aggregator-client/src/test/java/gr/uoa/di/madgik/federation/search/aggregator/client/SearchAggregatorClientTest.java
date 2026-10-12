@@ -18,7 +18,7 @@ package gr.uoa.di.madgik.federation.search.aggregator.client;
 
 import gr.uoa.di.madgik.federation.search.aggregator.core.AggregatedResult;
 import gr.uoa.di.madgik.federation.search.aggregator.core.Page;
-import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceIdName;
+import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceSummary;
 import gr.uoa.di.madgik.registry.domain.ScoredResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,15 +54,16 @@ class SearchAggregatorClientTest {
     }
 
     @Test
-    void listResourceIds_parsesBody() {
+    void listResources_parsesBody() {
         mockServer.expect(requestTo(BASE_URL + "/services/ids?query=foo"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(
-                        "[{\"id\":\"21.T15/svc\",\"name\":\"A Service\"}]", MediaType.APPLICATION_JSON));
+                        "[{\"id\":\"21.T15/svc\",\"name\":\"A Service\",\"nodePID\":\"21.T15999/node-a\"," +
+                                "\"description\":\"test\"}]", MediaType.APPLICATION_JSON));
 
-        List<ResourceIdName> result = client.listResourceIds("services", "foo");
+        List<ResourceSummary> result = client.listResources("services", "foo");
 
-        assertThat(result).containsExactly(new ResourceIdName("21.T15/svc", "A Service"));
+        assertThat(result).containsExactly(new ResourceSummary("21.T15/svc", "A Service", "21.T15999/node-a", "test"));
     }
 
     @Test
