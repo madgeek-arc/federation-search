@@ -18,7 +18,7 @@ package gr.uoa.di.madgik.federation.search.aggregator.service;
 
 import gr.uoa.di.madgik.federation.search.aggregator.core.Page;
 import gr.uoa.di.madgik.federation.search.aggregator.core.AggregatedResult;
-import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceIdName;
+import gr.uoa.di.madgik.federation.search.aggregator.core.ResourceSummary;
 import gr.uoa.di.madgik.registry.domain.FacetFilter;
 import gr.uoa.di.madgik.registry.domain.HighlightedResult;
 import gr.uoa.di.madgik.registry.domain.Paging;
@@ -180,7 +180,7 @@ class AggregatingServiceTest {
 
     @Test
     @SuppressWarnings({"unchecked", "rawtypes"})
-    void listResourceIdsAndNames_dedupsAndSortsByName_unwrappingEnclosedPayloads() {
+    void listResourceSummaries_dedupsAndSortsByName_unwrappingEnclosedPayloads() {
         when(nodeEndpointService.getResourceCatalogueEndpoints()).thenReturn(List.of("node1", "node2"));
 
         RestClient.RequestHeadersUriSpec getSpec = mock(RestClient.RequestHeadersUriSpec.class);
@@ -210,8 +210,8 @@ class AggregatingServiceTest {
                 .thenReturn(node1Page)
                 .thenReturn(node2Page);
 
-        List<ResourceIdName> result =
-                aggregatingService.listResourceIdsAndNames("service", null);
+        List<ResourceSummary> result =
+                aggregatingService.listResourceSummaries("service", null);
 
         assertThat(result).extracting("id").containsExactly("n/alpha", "n/mu", "n/zeta");
         assertThat(result).extracting("name").containsExactly("Alpha", "Mu", "Zeta");

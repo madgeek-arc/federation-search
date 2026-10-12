@@ -87,7 +87,7 @@ public class Config {
      * The caches change on different timescales and carry very different payloads, so each gets
      * its own Caffeine spec via registerCustomCache rather than sharing the manager-wide one:
      *  - "nodes"                  the registry node list
-     *  - "federationResourceIds"  the per-resource-type {id,name} inventory behind dropdowns
+     *  - "federationResourceIds"  the per-resource-type {id,name,nodePID,description} inventory behind dropdowns
      *  - "federationResourceById" single-resource lookups (incl. cached misses) used by a node's
      *                             cross-node reference validation
      */

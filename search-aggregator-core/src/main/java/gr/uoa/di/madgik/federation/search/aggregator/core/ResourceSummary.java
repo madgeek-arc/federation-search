@@ -17,22 +17,21 @@
 package gr.uoa.di.madgik.federation.search.aggregator.core;
 
 /**
- * Minimal identity + display-label pair for a federated resource, used to populate
- * relational-field dropdowns on a node without shipping the full resource payload,
+ * Minimal summary (id, display name, owning node and description) of a federated resource,
+ * used to populate relational-field dropdowns on a node without shipping the full resource payload,
  * running Reciprocal Rank Fusion, or merging facets. See
- * {@code AggregatingService#listResourceIdsAndNames} and
- * {@code SearchAggregatorClient#listResourceIds}.
+ * {@code AggregatingService#listResourceSummaries} and
+ * {@code SearchAggregatorClient#listResources}.
  * <p>
  * {@code nodePID} identifies the node the resource is published on, so a dropdown can tell
  * apart resources coming from different nodes. It is {@code null} when the owning node does
- * not expose it.
+ * not expose it. {@code description} is the resource's short description, or {@code null}
+ * when it has none.
+ *
+ * @param id          the resource identifier
+ * @param name        the display name; falls back to {@code id} when the resource has no name
+ * @param nodePID     the PID of the node the resource is published on, or {@code null}
+ * @param description the resource description, or {@code null}
  */
-public record ResourceIdName(String id, String name, String nodePID) {
-
-    /**
-     * Backwards-compatible constructor for callers that have no node information.
-     */
-    public ResourceIdName(String id, String name) {
-        this(id, name, null);
-    }
+public record ResourceSummary(String id, String name, String nodePID, String description) {
 }
