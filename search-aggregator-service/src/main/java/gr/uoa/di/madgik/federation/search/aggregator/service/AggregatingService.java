@@ -170,33 +170,31 @@ public class AggregatingService {
 
     private List<ResourceSummary> fetchSummaries(String url, String resourceType) {
         return fetchPage(url, FetchPhase.DATA)
-                .map(page -> {
-                    List<HighlightedResult<?>> results = page.getResults();
-                    if (results == null || results.isEmpty()) {
-                        return Collections.<ResourceSummary>emptyList();
-                    }
-                    List<HighlightedResult<?>> unwrapped =
-                            BundledResourceUnwrapper.unwrapIfEnclosed(results, resourceType, url);
-                    List<ResourceSummary> out = new ArrayList<>(unwrapped.size());
-                    for (HighlightedResult<?> r : unwrapped) {
-                        if (r.getResult() instanceof Map<?, ?> map) {
-                            Object id = map.get("id");
-                            if (id == null) {
-                                continue;
-                            }
-                            Object name = map.get("name");
-                            Object nodePID = map.get("nodePID");
-                            Object description = map.get("description");
-                            out.add(new ResourceSummary(
-                                    id.toString(),
-                                    name != null ? name.toString() : id.toString(),
-                                    nodePID != null ? nodePID.toString() : null,
-                                    description != null ? description.toString() : null));
-                        }
-                    }
-                    return out;
-                })
+                .map(Paging::getResults)
+                .filter(results -> results != null && !results.isEmpty())
+                .map(results -> BundledResourceUnwrapper.unwrapIfEnclosed(results, resourceType, url))
+                .map(unwrapped -> unwrapped.stream()
+                        .filter(Objects::nonNull)
+                        .map(HighlightedResult::getResult)
+                        .map(AggregatingService::toSummary)
+                        .flatMap(Optional::stream)
+                        .toList())
                 .orElseGet(Collections::emptyList);
+    }
+
+    private static Optional<ResourceSummary> toSummary(Object result) {
+        if (!(result instanceof Map<?, ?> map) || map.get("id") == null) {
+            return Optional.empty();
+        }
+        String id = map.get("id").toString();
+        Object name = map.get("name");
+        Object nodePID = map.get("nodePID");
+        Object description = map.get("description");
+        return Optional.of(new ResourceSummary(
+                id,
+                name != null ? name.toString() : id,
+                nodePID != null ? nodePID.toString() : null,
+                description != null ? description.toString() : null));
     }
 
     /**
