@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/madgeek-arc/federation-search/compare/v1.2.0...v1.3.0) (2026-09-21)
+
+
+### Features
+
+* add get by ID method ([c2c8d24](https://github.com/madgeek-arc/federation-search/commit/c2c8d2453784c8b481d17aba697f8b3365d32bbc))
+
+
+### Bug Fixes
+
+* unwrap resources of older APIs ([9581e6f](https://github.com/madgeek-arc/federation-search/commit/9581e6f8c943437e5b76d745c5cc4cc94415e7be))
+
 ## [1.2.0](https://github.com/madgeek-arc/federation-search/compare/v1.1.0...v1.2.0) (2026-06-16)
 
 
