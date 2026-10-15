@@ -1,0 +1,37 @@
+/*
+ * Copyright 2026 OpenAIRE AMKE & Athena Research and Innovation Center
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package gr.uoa.di.madgik.federation.search.aggregator.core;
+
+/**
+ * Minimal summary (id, display name, owning node and description) of a federated resource,
+ * used to populate relational-field dropdowns on a node without shipping the full resource payload,
+ * running Reciprocal Rank Fusion, or merging facets. See
+ * {@code AggregatingService#listResourceSummaries} and
+ * {@code SearchAggregatorClient#listResources}.
+ * <p>
+ * {@code nodePID} identifies the node the resource is published on, so a dropdown can tell
+ * apart resources coming from different nodes. It is {@code null} when the owning node does
+ * not expose it. {@code description} is the resource's short description, or {@code null}
+ * when it has none.
+ *
+ * @param id          the resource identifier
+ * @param name        the display name; falls back to {@code id} when the resource has no name
+ * @param nodePID     the PID of the node the resource is published on, or {@code null}
+ * @param description the resource description, or {@code null}
+ */
+public record ResourceSummary(String id, String name, String nodePID, String description) {
+}

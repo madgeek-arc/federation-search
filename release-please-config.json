@@ -10,7 +10,8 @@
       "draft": false,
       "prerelease": false,
       "extra-files": [
-        {"type": "generic", "path": "README.md"}
+        {"type": "generic", "path": "README.md"},
+        {"type": "generic", "path": "pom.xml"}
       ]
     }
   },
