@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.0.0](https://github.com/madgeek-arc/federation-search/compare/v1.3.0...v2.0.0) (2026-10-15)
+
+
+### Bug Fixes
+
+* **ci:** install modules once before parallel stages ([505a080](https://github.com/madgeek-arc/federation-search/commit/505a0802d0dd77c3797923ec825001690a1352a0))
+* **node:** time out registry client and stop wiping node cache on refresh failure (so a registry outage at refresh time won't wipe the last known-good node) ([cb66d0a](https://github.com/madgeek-arc/federation-search/commit/cb66d0a6dc6b16ceae470ace5cbfac3fa54d9a63))
+* **test:** update NodeResolverTest for the new timeout constructor ([c1f836c](https://github.com/madgeek-arc/federation-search/commit/c1f836c7a16fcec7941f09b25cc8320431f85cac))
+
+
+### Miscellaneous Chores
+
+* release 2.0.0 ([51f15d8](https://github.com/madgeek-arc/federation-search/commit/51f15d83091b7f7448fc2c5ccb394742d1fc6958))
+
 ## [1.3.0](https://github.com/madgeek-arc/federation-search/compare/v1.2.0...v1.3.0) (2026-09-21)
 
 
