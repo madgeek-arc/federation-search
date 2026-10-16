@@ -83,6 +83,11 @@
 					<image>
 						<name>${spring-boot.build-image.imageName}</name>
 						<cleanCache>true</cleanCache>
+						<buildCache>
+							<volume>
+								<name>federation-search-aggregator-build-cache</name>
+							</volume>
+						</buildCache>
 						<buildpacks>
 							<buildpack>docker://docker.io/paketobuildpacks/java</buildpack>
 							<buildpack>docker://docker.io/paketobuildpacks/health-checker:latest</buildpack>

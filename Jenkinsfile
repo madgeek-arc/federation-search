@@ -1,4 +1,5 @@
 def DOCKER_IMAGE_SHA = ''
+def IMAGE_BUILD_STARTED = false
 
 pipeline {
   agent { label 'master' }
@@ -18,6 +19,7 @@ pipeline {
     IMAGE_NAME = "federation-search-aggregator"
     REGISTRY = "docker.madgik.di.uoa.gr"
     REGISTRY_CRED = 'docker-registry'
+    BUILD_CACHE_VOLUME = "${IMAGE_NAME}-build-cache"
     DOCKER_TAG = ''
   }
 
@@ -46,7 +48,16 @@ pipeline {
         }
       }
       steps {
-        sh './mvnw deploy -DskipTests'
+        script {
+          if (env.TAG_NAME != null) {
+            // releases cannot be redeployed, so a rerun of a tag build must not fail here
+            catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+              sh './mvnw deploy -DskipTests'
+            }
+          } else {
+            sh './mvnw deploy -DskipTests'
+          }
+        }
       }
     }
 
@@ -98,9 +109,13 @@ pipeline {
             }
           }
           steps {
-            script {
-              sh "./mvnw -pl search-aggregator-service spring-boot:build-image -DskipTests"
-              DOCKER_IMAGE_SHA = sh(script: "docker inspect --format='{{.Id}}' ${REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG} 2>/dev/null || true", returnStdout: true).trim()
+            lock(resource: "image-build-${IMAGE_NAME}") {
+              script {
+                IMAGE_BUILD_STARTED = true
+                sh "docker ps -aq --filter volume=${BUILD_CACHE_VOLUME} | xargs -r docker rm -f"
+                sh "./mvnw -pl search-aggregator-service spring-boot:build-image -DskipTests"
+                DOCKER_IMAGE_SHA = sh(script: "docker inspect --format='{{.Id}}' ${REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG} 2>/dev/null || true", returnStdout: true).trim()
+              }
             }
           }
         }
@@ -181,6 +196,11 @@ pipeline {
   post {
     always {
       script {
+        if (IMAGE_BUILD_STARTED) {
+          lock(resource: "image-build-${IMAGE_NAME}") {
+            sh "docker ps -aq --filter volume=${BUILD_CACHE_VOLUME} | xargs -r docker rm -f"
+          }
+        }
         if (DOCKER_IMAGE_SHA) {
           sh "docker rmi -f ${DOCKER_IMAGE_SHA} || true"
         }
