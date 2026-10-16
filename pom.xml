@@ -9,7 +9,7 @@
 	</parent>
 	<groupId>gr.uoa.di.madgik.federation</groupId>
 	<artifactId>search-aggregator</artifactId>
-	<version>2.0.0</version>
+	<version>2.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>Federation Search Aggregator</name>
 	<description>Aggregates search results from multiple Resource Catalogue nodes into a single federation API endpoint.</description>
@@ -34,7 +34,7 @@
 	</modules>
 
 	<properties>
-		<revision>2.0.0</revision><!-- x-release-please-version -->
+		<revision>2.0.1-SNAPSHOT</revision><!-- x-release-please-version -->
 		<java.version>25</java.version>
 		<registry-core.version>5.0.0-SNAPSHOT</registry-core.version>
 		<spring-boot.build-image.imageName>docker.madgik.di.uoa.gr/federation-search-aggregator:${project.version}</spring-boot.build-image.imageName>
