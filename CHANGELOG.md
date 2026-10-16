@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.1](https://github.com/madgeek-arc/federation-search/compare/v2.0.0...v2.0.1) (2026-10-16)
+
+
+### Bug Fixes
+
+* **ci:** clean up orphaned image build containers ([c6dd620](https://github.com/madgeek-arc/federation-search/commit/c6dd620ba8f6dd20bcbc3b675c9352626ba91758))
+* **ci:** deploy artifacts before tests and image build ([127b758](https://github.com/madgeek-arc/federation-search/commit/127b758d29e893f4a209a060675ff9dd5e4c56fc))
+
 ## [2.0.0](https://github.com/madgeek-arc/federation-search/compare/v1.3.0...v2.0.0) (2026-10-15)
 
 
