@@ -10,7 +10,7 @@ pipeline {
   options {
     buildDiscarder(logRotator(numToKeepStr: '20'))
     disableConcurrentBuilds(abortPrevious: true)
-    timeout(time: 30, unit: 'MINUTES')
+    timeout(time: 60, unit: 'MINUTES')
     timestamps()
   }
 
@@ -35,6 +35,18 @@ pipeline {
     stage('Install Modules') {
       steps {
         sh './mvnw -B install -DskipTests'
+      }
+    }
+
+    stage('Deploy Artifacts') {
+      when {
+        anyOf {
+          expression { return DOCKER_TAG.endsWith('-SNAPSHOT') } // deploy all snapshots
+          expression { return env.TAG_NAME != null } // deploy only tag build as release
+        }
+      }
+      steps {
+        sh './mvnw deploy -DskipTests'
       }
     }
 
@@ -93,18 +105,6 @@ pipeline {
           }
         }
 
-      }
-    }
-
-    stage('Deploy Artifacts') {
-      when {
-        anyOf {
-          expression { return DOCKER_TAG.endsWith('-SNAPSHOT') } // deploy all snapshots
-          expression { return env.TAG_NAME != null } // deploy only tag build as release
-        }
-      }
-      steps {
-        sh './mvnw deploy -DskipTests'
       }
     }
 
